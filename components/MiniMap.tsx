@@ -2,11 +2,10 @@
 
 import { useState } from 'react';
 import type { CSSProperties } from 'react';
-import layout from '@/data/kk-titiwangsa';
-import { sanitizeLayout } from '@/lib/layout';
 import { usePlayerStore } from '@/components/playerStore';
+import { layout as L, cfg } from '@/components/sharedLayout';
 
-const { layout: L, cfg } = sanitizeLayout(layout);
+// Shared randomized layout instance
 
 export function MiniMap() {
   const { x, z, yaw } = usePlayerStore();

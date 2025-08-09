@@ -5,11 +5,11 @@ import { RigidBody, CapsuleCollider } from '@react-three/rapier';
 import { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { usePlayerStore } from '@/components/playerStore';
-import layoutData from '@/data/kk-titiwangsa';
-import { sanitizeLayout, aabbContains } from '@/lib/layout';
+import { aabbContains } from '@/lib/layout';
+import { layout } from '@/components/sharedLayout';
 import { useProgressStore } from '@/components/progressStore';
 
-const { layout } = sanitizeLayout(layoutData);
+// Use shared mutable layout instance (randomized on reset)
 
 function useKeyboard() {
   const keys = useMemo(() => new Set<string>(), []);
