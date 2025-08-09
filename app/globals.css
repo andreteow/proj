@@ -4,7 +4,8 @@ html, body { height: 100%; margin: 0; padding: 0; }
 body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
 /* Pastel gradient background */
 body {
-  background: linear-gradient(180deg, #f9fbff 0%, #f6f0ff 50%, #eef9f4 100%);
+  /* Soft pink pastel gradient */
+  background: linear-gradient(180deg, #fff5f8 0%, #ffeaf0 45%, #fff0f6 100%);
 }
 
 #hud {
@@ -34,7 +35,8 @@ body {
   color: #fff;
   border-radius: 50%;
   overflow: hidden;
-  background: radial-gradient(closest-side, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
+  /* Semi-transparent black background as requested */
+  background: rgba(0,0,0,0.5);
   box-shadow: 0 0 0 2px rgba(255,255,255,0.2), 0 6px 18px rgba(0,0,0,0.25);
   z-index: 20;
 }
@@ -79,8 +81,8 @@ body {
 #hud #hint {
   margin-top: 8px;
   padding: 6px 8px;
-  background: rgba(255, 255, 255, 0.7);
-  border-left: 3px solid #00a6d6;
+  background: rgba(255, 255, 255, 0.75);
+  border-left: 3px solid #ff8fb3; /* pink accent */
   border-radius: 4px;
   font-size: 12px;
 }

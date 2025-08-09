@@ -6,6 +6,9 @@ export const useProgressStore = create<{
   checkedIn: boolean; consulted: boolean; gotMeds: boolean;
   setCheckedIn: () => void; setConsulted: () => void; setGotMeds: () => void;
   reset: () => void;
+  // assigned consult target (1..4) after registration
+  targetConsult: number | null;
+  assignConsultTarget: () => number;
   // timer
   running: boolean;
   startAt: number | null; // epoch ms
@@ -21,7 +24,14 @@ export const useProgressStore = create<{
   setCheckedIn: () => set({ checkedIn: true }),
   setConsulted: () => set({ consulted: true }),
   setGotMeds: () => set({ gotMeds: true }),
-  reset: () => set({ checkedIn: false, consulted: false, gotMeds: false }),
+  reset: () => set({ checkedIn: false, consulted: false, gotMeds: false, targetConsult: null }),
+  // consult assignment
+  targetConsult: null,
+  assignConsultTarget: () => {
+    const n = 1 + Math.floor(Math.random() * 4);
+    set({ targetConsult: n });
+    return n;
+  },
   // timer
   running: false,
   startAt: null,

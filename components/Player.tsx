@@ -55,6 +55,7 @@ export function Player() {
   const yawSpeed = 1.8; // rad/s
 
   const prevE = useRef(false);
+  const hasStarted = useRef(false);
 
   // On reset request, teleport to spawn and zero velocity
   useEffect(() => {
@@ -67,6 +68,7 @@ export function Player() {
     camera.position.set(spawnX, headHeight, spawnZ);
     camera.rotation.set(0, 0, 0);
     setHint(null);
+    hasStarted.current = false;
   }, [resetToken]);
 
   useFrame((_, dt) => {
@@ -95,6 +97,11 @@ export function Player() {
 
     if (move.lengthSq() > 0) {
       move.normalize().multiplyScalar(speed);
+      // Start timer on first movement
+      if (!hasStarted.current && !progress.running && progress.startAt == null && progress.elapsedMs === 0) {
+        progress.start();
+        hasStarted.current = true;
+      }
     }
 
     // Preserve vertical velocity, set horizontal
@@ -130,19 +137,31 @@ export function Player() {
           hint = 'Tekan E untuk Daftar';
           if (justPressedE) {
             progress.setCheckedIn();
-            if (!progress.running) progress.start();
+            const n = progress.assignConsultTarget();
+            hint = `Giliran anda: Bilik Konsultasi ${n}. Pergi ke bilik tersebut.`;
           }
         }
       }
     }
 
-    // Consult interaction: inside any consult room
-    if (!progress.consulted && !hint) {
+    // Consult interaction: must match assigned consult room number
+    if (!progress.consulted && progress.checkedIn && !hint) {
       const room = layout.rooms.find(r => r.key?.startsWith('consult') && aabbContains(t.x, t.z, r.x, r.z, r.w, r.h));
+      const target = progress.targetConsult;
       if (room) {
-        hint = 'Tekan E untuk Jumpa Doktor';
-        if (justPressedE) {
-          progress.setConsulted();
+        const match = /consult(\d+)/.exec(room.key || '');
+        const num = match ? Number(match[1]) : null;
+        if (target != null) {
+          if (num === target) {
+            hint = `Tekan E untuk Jumpa Doktor (Bilik ${target})`;
+            if (justPressedE) {
+              progress.setConsulted();
+            }
+          } else {
+            hint = `Pergi ke Bilik Konsultasi ${target}`;
+          }
+        } else {
+          hint = 'Sila daftar di Pendaftaran dahulu';
         }
       }
     }
