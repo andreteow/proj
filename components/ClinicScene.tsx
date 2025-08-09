@@ -13,8 +13,8 @@ const { layout, cfg } = sanitizeLayout(layoutData);
 export function ClinicScene() {
   return (
     <>
-      <hemisphereLight intensity={0.7} groundColor={0x8899aa} />
-      <directionalLight position={[14, 16, 10]} castShadow intensity={0.7} />
+      <hemisphereLight intensity={0.85} groundColor={0xcad9e6} color={0xf5f7fb} />
+      <directionalLight position={[14, 16, 10]} castShadow intensity={0.65} color={0xffffff} />
       <Physics debug={false} gravity={[0, -9.81, 0]}>
         <WorldBounds />
         <Corridors />
@@ -36,31 +36,33 @@ function WorldBounds() {
       {/* Floor */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
         <planeGeometry args={[W, H]} />
-        <meshStandardMaterial color="#e7ecef" />
+        <meshStandardMaterial color="#f1f5fb" />
       </mesh>
+      {/* Floor collider */}
+      <CuboidCollider args={[W / 2, 0.05, H / 2]} position={[0, 0, 0]} />
       {/* Border walls */}
       {/* North */}
       <mesh position={[0, wh / 2, -H / 2]} castShadow>
         <boxGeometry args={[W, wh, t]} />
-        <meshStandardMaterial color="#cfd7df" />
+        <meshStandardMaterial color="#c6d6e6" />
       </mesh>
       <CuboidCollider args={[W / 2, wh / 2, t / 2]} position={[0, wh / 2, -H / 2]} />
       {/* South */}
       <mesh position={[0, wh / 2, H / 2]} castShadow>
         <boxGeometry args={[W, wh, t]} />
-        <meshStandardMaterial color="#cfd7df" />
+        <meshStandardMaterial color="#c6d6e6" />
       </mesh>
       <CuboidCollider args={[W / 2, wh / 2, t / 2]} position={[0, wh / 2, H / 2]} />
       {/* West */}
       <mesh position={[-W / 2, wh / 2, 0]} castShadow>
         <boxGeometry args={[t, wh, H]} />
-        <meshStandardMaterial color="#cfd7df" />
+        <meshStandardMaterial color="#c6d6e6" />
       </mesh>
       <CuboidCollider args={[t / 2, wh / 2, H / 2]} position={[-W / 2, wh / 2, 0]} />
       {/* East */}
       <mesh position={[W / 2, wh / 2, 0]} castShadow>
         <boxGeometry args={[t, wh, H]} />
-        <meshStandardMaterial color="#cfd7df" />
+        <meshStandardMaterial color="#c6d6e6" />
       </mesh>
       <CuboidCollider args={[t / 2, wh / 2, H / 2]} position={[W / 2, wh / 2, 0]} />
     </RigidBody>

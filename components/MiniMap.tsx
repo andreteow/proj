@@ -7,31 +7,48 @@ import { usePlayerStore } from '@/components/playerStore';
 const { layout: L, cfg } = sanitizeLayout(layout);
 
 export function MiniMap() {
-  const { x, z } = usePlayerStore();
-  const scaleX = 200 / cfg.floorSize.w;
-  const scaleZ = 140 / cfg.floorSize.h;
-  const originX = 10; // padding inside panel
-  const originZ = 10;
+  const { x, z, yaw } = usePlayerStore();
+  // Panel dimensions
+  const size = 180; // px (circle)
+  const padding = 8; // inner padding
+  const worldW = cfg.floorSize.w;
+  const worldH = cfg.floorSize.h;
+  // Scale entire world to fit a base box; we'll translate to keep player centered
+  const scale = Math.min((size - padding * 2) / worldW, (size - padding * 2) / worldH);
+  const worldPxW = worldW * scale;
+  const worldPxH = worldH * scale;
+  const centerX = size / 2;
+  const centerY = size / 2;
+  const playerWorldPxX = (x + worldW / 2) * scale;
+  const playerWorldPxY = (z + worldH / 2) * scale;
+  const translateX = centerX - playerWorldPxX;
+  const translateY = centerY - playerWorldPxY;
 
   return (
-    <div id="minimap">
-      <div className="map">
+    <div id="minimap" style={{ width: size, height: size }}>
+      <div
+        className="map world"
+        style={{
+          width: worldPxW,
+          height: worldPxH,
+          transform: `translate(${translateX}px, ${translateY}px) rotate(${-yaw}rad)`,
+          transformOrigin: 'center center',
+        }}
+      >
         {L.rooms.map((r) => {
-          const left = originX + (r.x - r.w/2 + cfg.floorSize.w/2) * scaleX;
-          const top = originZ + (r.z - r.h/2 + cfg.floorSize.h/2) * scaleZ;
-          const w = r.w * scaleX;
-          const h = r.h * scaleZ;
+          const left = (r.x - r.w / 2 + worldW / 2) * scale;
+          const top = (r.z - r.h / 2 + worldH / 2) * scale;
+          const w = r.w * scale;
+          const h = r.h * scale;
           return (
             <div key={r.key} className="room" style={{ left, top, width: w, height: h }} title={r.name}>
               {r.name}
             </div>
           );
         })}
-        <div className="player" style={{
-          left: originX + (x + cfg.floorSize.w/2) * scaleX,
-          top: originZ + (z + cfg.floorSize.h/2) * scaleZ
-        }} />
       </div>
+      {/* Player arrow fixed in center, pointing up */}
+      <div className="playerArrow" style={{ left: centerX, top: centerY }} />
     </div>
   );
 }

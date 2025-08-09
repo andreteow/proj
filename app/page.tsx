@@ -15,10 +15,9 @@ export default function Page() {
   }, []);
 
   return (
-    <main style={{ height: '100vh', width: '100vw', background: '#a6b3c4' }}>
+    <main style={{ height: '100vh', width: '100vw' }}>
       <Suspense fallback={null}>
         <Canvas shadows camera={{ fov: 70, position: [0, 1.6, 6] }}>
-          <color attach="background" args={[0.86, 0.89, 0.94]} />
           <ClinicScene />
         </Canvas>
       </Suspense>
