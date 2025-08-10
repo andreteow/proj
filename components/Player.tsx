@@ -57,19 +57,29 @@ export function Player() {
   const prevE = useRef(false);
   const hasStarted = useRef(false);
 
-  // On reset request, teleport to spawn and zero velocity
+  // On reset or spawn change, teleport to spawn and zero velocity
   useEffect(() => {
     const rb = body.current;
     if (!rb) return;
     rb.setTranslation({ x: spawnX, y: headHeight, z: spawnZ }, true);
     rb.setLinvel({ x: 0, y: 0, z: 0 }, true);
     setPlayer(spawnX, spawnZ);
-    setYaw(0);
+    // Face into cafeteria when spawning
+    const cafe = layout.rooms.find(r => r.key === 'cafeteria');
+    let spawnYaw = 0;
+    const d = cafe?.doors?.[0];
+    if (d) {
+      if (d.side === 'N') spawnYaw = Math.PI;        // face south into room
+      if (d.side === 'S') spawnYaw = 0;              // face north
+      if (d.side === 'W') spawnYaw = -Math.PI / 2;   // face east
+      if (d.side === 'E') spawnYaw = Math.PI / 2;    // face west
+    }
+    setYaw(spawnYaw);
     camera.position.set(spawnX, headHeight, spawnZ);
-    camera.rotation.set(0, 0, 0);
+    camera.rotation.set(0, spawnYaw, 0);
     setHint(null);
     hasStarted.current = false;
-  }, [resetToken]);
+  }, [resetToken, spawnX, spawnZ]);
 
   useFrame((_, dt) => {
     const rb = body.current;

@@ -9,25 +9,12 @@ import { usePlayerStore } from '@/components/playerStore';
 import { NPCs } from '@/components/NPCs';
 import { layout, cfg } from '@/components/sharedLayout';
 
-// Capture original slots for randomization (consults, reg/pharm, east wing)
-const CONSULT_SLOTS = (() => {
-  const consults = layout.rooms.filter(r => r.key?.startsWith('consult'));
-  return consults.map((r) => ({
+// Capture original room slots for randomization across ALL rooms
+const ROOM_SLOTS = (() => {
+  return layout.rooms.map((r) => ({
     x: r.x, z: r.z, w: r.w, h: r.h,
     doors: (r.doors || []).map(d => ({ side: d.side, offset: d.offset, width: d.width }))
   }));
-})();
-
-const REG_PHARM_SLOTS = (() => {
-  const keys = new Set(['registration','pharmacy']);
-  const rooms = layout.rooms.filter(r => r.key && keys.has(r.key));
-  return rooms.map((r) => ({ x: r.x, z: r.z, w: r.w, h: r.h, doors: (r.doors || []).map(d => ({ ...d })) }));
-})();
-
-const EAST_SLOTS = (() => {
-  const keys = new Set(['lab','immun','mch']);
-  const rooms = layout.rooms.filter(r => r.key && keys.has(r.key));
-  return rooms.map((r) => ({ x: r.x, z: r.z, w: r.w, h: r.h, doors: (r.doors || []).map(d => ({ ...d })) }));
 })();
 
 function seededRand(seed: number) {
@@ -41,47 +28,100 @@ function seededRand(seed: number) {
   };
 }
 
-function randomizeConsultRooms(seed: number) {
-  const consults = layout.rooms.filter(r => r.key?.startsWith('consult'));
-  if (consults.length !== CONSULT_SLOTS.length) return;
+function randomizeAllRooms(seed: number) {
+  if (layout.rooms.length !== ROOM_SLOTS.length) return;
   const rnd = seededRand(seed || 1);
-  const idx = [...CONSULT_SLOTS.keys()];
-  // Fisher–Yates shuffle
+  const idx = [...ROOM_SLOTS.keys()];
+  // Fisher–Yates shuffle over ALL slots
   for (let i = idx.length - 1; i > 0; i--) {
     const j = Math.floor(rnd() * (i + 1));
     [idx[i], idx[j]] = [idx[j], idx[i]];
   }
-  consults.forEach((r, i) => {
-    const s = CONSULT_SLOTS[idx[i]];
+  layout.rooms.forEach((r, i) => {
+    const s = ROOM_SLOTS[idx[i]];
     r.x = s.x; r.z = s.z; r.w = s.w; r.h = s.h; r.doors = s.doors.map(d => ({ ...d }));
   });
 }
 
-function randomizeRoomsGroup(keys: string[], slots: { x: number; z: number; w: number; h: number; doors: Door[] }[], seed: number) {
-  const set = new Set(keys);
-  const rooms = layout.rooms.filter(r => r.key && set.has(r.key));
-  if (rooms.length !== slots.length) return;
-  const rnd = seededRand(seed || 1);
-  const idx = [...slots.keys()];
-  for (let i = idx.length - 1; i > 0; i--) {
-    const j = Math.floor(rnd() * (i + 1));
-    [idx[i], idx[j]] = [idx[j], idx[i]];
+// Ensure each room has at least one door that faces the nearest corridor
+function ensureDoorsTowardCorridors() {
+  if (!layout.corridors?.length) return;
+  const corridors = layout.corridors.map(c => ({
+    x0: c.x - c.w / 2,
+    x1: c.x + c.w / 2,
+    z0: c.z - c.h / 2,
+    z1: c.z + c.h / 2,
+    cx: c.x,
+    cz: c.z,
+  }));
+
+  for (const r of layout.rooms) {
+    const x0 = r.x - r.w / 2;
+    const x1 = r.x + r.w / 2;
+    const z0 = r.z - r.h / 2;
+    const z1 = r.z + r.h / 2;
+
+    let best: { side: 'N'|'S'|'W'|'E'; offset: number; dist: number } | null = null;
+    const consider = (side: 'N'|'S'|'W'|'E', px: number, pz: number, length: number) => {
+      for (const c of corridors) {
+        const nx = Math.max(c.x0, Math.min(px, c.x1));
+        const nz = Math.max(c.z0, Math.min(pz, c.z1));
+        const dx = nx - px; const dz = nz - pz;
+        const d2 = dx*dx + dz*dz;
+        const dist = Math.sqrt(d2);
+        // projected offset along this side toward corridor point
+        const off = side === 'N' || side === 'S' ? (nx - x0) : (nz - z0);
+        const offset = Math.max(0, Math.min(off, length));
+        if (!best || dist < best.dist) best = { side, offset, dist };
+      }
+    };
+
+    // Check centers of each wall
+    consider('N', r.x, z0, r.w);
+    consider('S', r.x, z1, r.w);
+    consider('W', x0, r.z, r.h);
+    consider('E', x1, r.z, r.h);
+
+    if (best) {
+      // Ensure a single reasonable width doorway toward corridor
+      const width = Math.min(Math.max(1.2, (r.w + r.h) * 0.04), 2.2); // 1.2m–2.2m
+      r.doors = [{ side: best.side, offset: best.offset, width }];
+    }
   }
-  rooms.forEach((r, i) => {
-    const s = slots[idx[i]];
-    r.x = s.x; r.z = s.z; r.w = s.w; r.h = s.h; r.doors = s.doors.map(d => ({ ...d }));
-  });
 }
 
 export function ClinicScene() {
   const resetToken = usePlayerStore((s) => s.resetToken);
+  const setSpawn = usePlayerStore((s) => s.setSpawn);
   const [randVersion, setRandVersion] = useState(0);
   useEffect(() => {
-    // Randomize layout on each new game (deterministic per reset burst)
+    // Randomize ALL rooms on each new game (deterministic per reset burst)
     const baseSeed = (resetToken + (Date.now() % 1000)) | 0;
-    randomizeConsultRooms(baseSeed ^ 0x1a2b3c);
-    randomizeRoomsGroup(['registration','pharmacy'], REG_PHARM_SLOTS, baseSeed ^ 0x55aa);
-    randomizeRoomsGroup(['lab','immun','mch'], EAST_SLOTS, baseSeed ^ 0xdeadbe);
+    randomizeAllRooms(baseSeed ^ 0x9e3779b9);
+    ensureDoorsTowardCorridors();
+    // Compute spawn just outside cafeteria door
+    const cafe = layout.rooms.find(r => r.key === 'cafeteria');
+    if (cafe) {
+      const t = cfg.wallThickness;
+      const x0 = cafe.x - cafe.w / 2;
+      const x1 = cafe.x + cafe.w / 2;
+      const z0 = cafe.z - cafe.h / 2;
+      const z1 = cafe.z + cafe.h / 2;
+      const d = (cafe.doors && cafe.doors[0]) || undefined;
+      if (d) {
+        const OUT = 0.75 + t / 2; // stand ~0.75m outside the doorway
+        const off = Math.max(0, Math.min(d.offset, d.side === 'N' || d.side === 'S' ? cafe.w : cafe.h));
+        let sx = cafe.x, sz = cafe.z;
+        if (d.side === 'N') { sx = x0 + off; sz = z0 - OUT; }
+        if (d.side === 'S') { sx = x0 + off; sz = z1 + OUT; }
+        if (d.side === 'W') { sx = x0 - OUT; sz = z0 + off; }
+        if (d.side === 'E') { sx = x1 + OUT; sz = z0 + off; }
+        setSpawn(sx, sz);
+      } else {
+        // Fallback: north side outside center
+        setSpawn(cafe.x, z0 - 0.8);
+      }
+    }
     setRandVersion((v) => v + 1);
   }, [resetToken]);
   return (
@@ -214,8 +254,14 @@ function WallWithDoor(props: any) {
         </>
       );
     } else {
-      const cx = x0 + Math.min(Math.max(door.offset, 0), len);
-      const half = Math.max(door.width / 2, 0.4);
+      const EDGE = 0.2; // keep small segments on both ends
+      let half = Math.max((door.width || 1) / 2, 0.4);
+      const maxHalf = Math.max(0, len / 2 - EDGE);
+      if (half > maxHalf) half = maxHalf;
+      const rawCx = x0 + Math.min(Math.max(door.offset ?? len / 2, 0), len);
+      const minCx = x0 + EDGE + half;
+      const maxCx = x1 - EDGE - half;
+      const cx = Math.min(Math.max(rawCx, minCx), maxCx);
       const leftLen = Math.max(cx - half - x0, 0);
       const rightLen = Math.max(x1 - (cx + half), 0);
       if (leftLen > 0.01) {
@@ -257,8 +303,14 @@ function WallWithDoor(props: any) {
         </>
       );
     } else {
-      const cz = z0 + Math.min(Math.max(door.offset, 0), len);
-      const half = Math.max(door.width / 2, 0.4);
+      const EDGE = 0.2; // keep small segments on both ends
+      let half = Math.max((door.width || 1) / 2, 0.4);
+      const maxHalf = Math.max(0, len / 2 - EDGE);
+      if (half > maxHalf) half = maxHalf;
+      const rawCz = z0 + Math.min(Math.max(door.offset ?? len / 2, 0), len);
+      const minCz = z0 + EDGE + half;
+      const maxCz = z1 - EDGE - half;
+      const cz = Math.min(Math.max(rawCz, minCz), maxCz);
       const topLen = Math.max(cz - half - z0, 0);
       const bottomLen = Math.max(z1 - (cz + half), 0);
       if (topLen > 0.01) {
