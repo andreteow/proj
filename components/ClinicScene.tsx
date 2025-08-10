@@ -60,8 +60,9 @@ function ensureDoorsTowardCorridors() {
     const x1 = r.x + r.w / 2;
     const z0 = r.z - r.h / 2;
     const z1 = r.z + r.h / 2;
-
-    let best: { side: 'N'|'S'|'W'|'E'; offset: number; dist: number } | null = null;
+    let chosenSide: 'N'|'S'|'W'|'E' = 'N';
+    let chosenOffset = 0;
+    let chosenDist = Number.POSITIVE_INFINITY;
     const consider = (side: 'N'|'S'|'W'|'E', px: number, pz: number, length: number) => {
       for (const c of corridors) {
         const nx = Math.max(c.x0, Math.min(px, c.x1));
@@ -72,7 +73,7 @@ function ensureDoorsTowardCorridors() {
         // projected offset along this side toward corridor point
         const off = side === 'N' || side === 'S' ? (nx - x0) : (nz - z0);
         const offset = Math.max(0, Math.min(off, length));
-        if (!best || dist < best.dist) best = { side, offset, dist };
+        if (dist < chosenDist) { chosenDist = dist; chosenSide = side; chosenOffset = offset; }
       }
     };
 
@@ -82,11 +83,9 @@ function ensureDoorsTowardCorridors() {
     consider('W', x0, r.z, r.h);
     consider('E', x1, r.z, r.h);
 
-    if (best) {
-      // Ensure a single reasonable width doorway toward corridor
-      const width = Math.min(Math.max(1.2, (r.w + r.h) * 0.04), 2.2); // 1.2m–2.2m
-      r.doors = [{ side: best.side, offset: best.offset, width }];
-    }
+    // Ensure a single reasonable width doorway toward corridor
+    const width = Math.min(Math.max(1.2, (r.w + r.h) * 0.04), 2.2); // 1.2m–2.2m
+    r.doors = [{ side: chosenSide, offset: chosenOffset, width }];
   }
 }
 
